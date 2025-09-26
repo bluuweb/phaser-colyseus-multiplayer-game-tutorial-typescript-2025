@@ -23,6 +23,15 @@ export class Game extends Scene {
     [sessionId: string]: Phaser.GameObjects.Text;
   } = {};
 
+  // Estrellas en el juego
+  starEntities: {
+    [starId: string]: Phaser.GameObjects.Image;
+  } = {};
+
+  // UI del ranking
+  rankingPanel: Phaser.GameObjects.Container;
+  rankingTexts: Phaser.GameObjects.Text[] = [];
+
   debugFPS: Phaser.GameObjects.Text;
 
   cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -95,6 +104,9 @@ export class Game extends Scene {
         .setOrigin(0.5);
       this.playerUsernames[sessionId] = usernameText;
 
+      // Actualizar ranking cuando se agregue un nuevo jugador
+      this.updateRanking();
+
       // is current player
       if (sessionId === this.room.sessionId) {
         this.currentPlayer = entity;
@@ -102,6 +114,7 @@ export class Game extends Scene {
         $(player).onChange(() => {
           // Sincronización del servidor (opcional para debug)
           // No necesitamos mostrar la posición remota visualmente
+          this.updateRanking(); // Actualizar ranking cuando cambie cualquier propiedad
         });
       } else {
         // listening for server updates
@@ -111,6 +124,7 @@ export class Game extends Scene {
           //
           entity.setData("serverX", player.x);
           entity.setData("serverY", player.y);
+          this.updateRanking(); // Actualizar ranking para otros jugadores también
         });
       }
     });
@@ -129,7 +143,50 @@ export class Game extends Scene {
         usernameText.destroy();
         delete this.playerUsernames[sessionId];
       }
+
+      // Actualizar ranking cuando un jugador se desconecte
+      this.updateRanking();
     });
+
+    // Manejar estrellas
+    $(this.room.state).stars.onAdd((star, starId) => {
+      // Crear imagen de estrella
+      const starEntity = this.add.image(star.x, star.y, "star");
+
+      // Agregar animación de brillo
+      this.tweens.add({
+        targets: starEntity,
+        alpha: 0.5,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+
+      this.starEntities[starId] = starEntity;
+    });
+
+    // Remover estrellas
+    $(this.room.state).stars.onRemove((_star, starId) => {
+      const starEntity = this.starEntities[starId];
+      if (starEntity) {
+        // Animación de desaparición
+        this.tweens.add({
+          targets: starEntity,
+          scale: 2,
+          alpha: 0,
+          duration: 300,
+          ease: "Back.easeIn",
+          onComplete: () => {
+            starEntity.destroy();
+          },
+        });
+        delete this.starEntities[starId];
+      }
+    });
+
+    // Crear panel de ranking
+    this.createRankingPanel();
 
     // this.cameras.main.startFollow(this.ship, true, 0.2, 0.2);
     // this.cameras.main.setZoom(1);
@@ -246,6 +303,87 @@ export class Game extends Scene {
       if (usernameText) {
         usernameText.x = entity.x;
         usernameText.y = entity.y - 30;
+      }
+    }
+  }
+
+  private createRankingPanel() {
+    // Crear contenedor para el ranking en la esquina superior derecha
+    this.rankingPanel = this.add.container(650, 20);
+
+    // Título del ranking (sin fondo)
+    const title = this.add
+      .text(0, 0, "🏆 RANKING", {
+        fontSize: "14px",
+        color: "#FFD700",
+        fontStyle: "bold",
+        align: "left",
+        stroke: "#000000",
+        strokeThickness: 2,
+      })
+      .setOrigin(0, 0);
+    this.rankingPanel.add(title);
+
+    // Crear textos para el ranking como tabla (mostrar todos los jugadores)
+    for (let i = 0; i < 10; i++) {
+      const rankText = this.add
+        .text(0, 25 + i * 18, "", {
+          fontSize: "11px",
+          color: "#ffffff",
+          align: "left",
+          stroke: "#000000",
+          strokeThickness: 1,
+        })
+        .setOrigin(0, 0);
+      this.rankingTexts.push(rankText);
+      this.rankingPanel.add(rankText);
+    }
+
+    this.rankingPanel.setDepth(100); // Asegurar que esté encima de todo
+
+    // Actualizar ranking inmediatamente
+    this.updateRanking();
+  }
+
+  private updateRanking() {
+    if (!this.room.state.players) return;
+
+    // Crear array con jugadores y sus puntuaciones
+    const playerScores: Array<{ username: string; score: number }> = [];
+
+    this.room.state.players.forEach((player) => {
+      playerScores.push({
+        username: player.username,
+        score: player.score || 0,
+      });
+    });
+
+    // Ordenar por puntuación (mayor a menor)
+    playerScores.sort((a, b) => b.score - a.score);
+
+    // Actualizar textos del ranking como tabla
+    for (let i = 0; i < this.rankingTexts.length; i++) {
+      if (i < playerScores.length) {
+        const player = playerScores[i];
+        const position = i + 1;
+        const medal =
+          i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${position}.`;
+        const color = i < 3 ? "#FFD700" : "#ffffff";
+
+        // Formato tabla: posición + nombre + estrellas
+        const maxNameLength = 12;
+        const truncatedName =
+          player.username.length > maxNameLength
+            ? player.username.substring(0, maxNameLength - 2) + ".."
+            : player.username.padEnd(maxNameLength);
+
+        this.rankingTexts[i].setText(
+          `${medal} ${truncatedName} ${player.score}⭐`
+        );
+        this.rankingTexts[i].setColor(color);
+        this.rankingTexts[i].setVisible(true);
+      } else {
+        this.rankingTexts[i].setVisible(false);
       }
     }
   }

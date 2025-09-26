@@ -1,10 +1,15 @@
 import { Client, Room } from "@colyseus/core";
-import { InputData, MyRoomState, Player } from "./schema/MyRoomState";
+import { InputData, MyRoomState, Player, Star } from "./schema/MyRoomState";
 
 export class MyRoom extends Room<MyRoomState> {
   maxClients = 100;
   state = new MyRoomState();
   fixedTimeStep = 1000 / 60;
+
+  // Control de generación de estrellas
+  private starSpawnTimer = 0;
+  private starSpawnInterval = 3000; // 3 segundos entre estrellas
+  private maxStars = 5; // Máximo 5 estrellas simultáneas
 
   onCreate(options: any) {
     // set map dimensions
@@ -22,11 +27,54 @@ export class MyRoom extends Room<MyRoomState> {
     let elapsedTime = 0;
     this.setSimulationInterval((deltaTime) => {
       elapsedTime += deltaTime;
+      this.starSpawnTimer += deltaTime;
 
       while (elapsedTime >= this.fixedTimeStep) {
         elapsedTime -= this.fixedTimeStep;
         this.fixedTick(this.fixedTimeStep);
       }
+
+      // Generar estrellas periódicamente
+      this.handleStarSpawning();
+    });
+  }
+
+  private handleStarSpawning() {
+    if (
+      this.starSpawnTimer >= this.starSpawnInterval &&
+      this.state.stars.size < this.maxStars
+    ) {
+      this.spawnStar();
+      this.starSpawnTimer = 0;
+    }
+  }
+
+  private spawnStar() {
+    const star = new Star();
+    star.id = `star_${Date.now()}_${Math.random()}`;
+    star.x = Math.random() * (this.state.mapWidth - 40) + 20; // 20px margen
+    star.y = Math.random() * (this.state.mapHeight - 40) + 20; // 20px margen
+
+    this.state.stars.set(star.id, star);
+    console.log(`Star spawned at (${star.x}, ${star.y})`);
+  }
+
+  private checkStarCollisions() {
+    this.state.players.forEach((player, sessionId) => {
+      this.state.stars.forEach((star, starId) => {
+        const distance = Math.sqrt(
+          Math.pow(player.x - star.x, 2) + Math.pow(player.y - star.y, 2)
+        );
+
+        // Si la distancia es menor a 30px, hay colisión
+        if (distance < 30) {
+          player.score += 1;
+          this.state.stars.delete(starId);
+          console.log(
+            `${player.username} collected a star! Score: ${player.score}`
+          );
+        }
+      });
     });
   }
 
@@ -57,6 +105,9 @@ export class MyRoom extends Room<MyRoomState> {
         player.tick = input.tick;
       }
     });
+
+    // Verificar colisiones con estrellas
+    this.checkStarCollisions();
   }
 
   onJoin(client: Client, options: any) {

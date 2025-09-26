@@ -68,11 +68,45 @@ export class Preloader extends Scene {
   }
 
   create() {
-    //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
-    //  For example, you can define global animations here, so we can use them in other scenes.
+    // Crear gráfico de estrella usando Phaser Graphics
+    this.createStarGraphic();
 
     //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
     // this.scene.start('MainMenu');
     this.scene.start("Game");
+  }
+
+  private createStarGraphic() {
+    // Crear una estrella de 5 puntas usando Graphics
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xffd700); // Color dorado
+    graphics.lineStyle(2, 0xffa500); // Borde naranja
+
+    const starPoints = [];
+    const centerX = 15;
+    const centerY = 15;
+    const outerRadius = 12;
+    const innerRadius = 6;
+
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI) / 5;
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      starPoints.push(x, y);
+    }
+
+    graphics.beginPath();
+    graphics.moveTo(starPoints[0], starPoints[1]);
+    for (let i = 2; i < starPoints.length; i += 2) {
+      graphics.lineTo(starPoints[i], starPoints[i + 1]);
+    }
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.strokePath();
+
+    // Convertir el gráfico a textura
+    graphics.generateTexture("star", 30, 30);
+    graphics.destroy();
   }
 }
