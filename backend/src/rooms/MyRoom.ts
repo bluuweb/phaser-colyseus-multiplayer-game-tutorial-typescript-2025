@@ -50,6 +50,10 @@ export class MyRoom extends Room<MyRoomState> {
           player.y += velocity;
         }
 
+        // Aplicar límites de pantalla (servidor autoritativo)
+        player.x = Math.max(0, Math.min(this.state.mapWidth, player.x));
+        player.y = Math.max(0, Math.min(this.state.mapHeight, player.y));
+
         player.tick = input.tick;
       }
     });

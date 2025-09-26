@@ -217,6 +217,10 @@ export class Game extends Scene {
       this.currentPlayer.y += velocity;
     }
 
+    // Aplicar límites de pantalla en el cliente (predicción)
+    this.currentPlayer.x = Math.max(0, Math.min(800, this.currentPlayer.x));
+    this.currentPlayer.y = Math.max(0, Math.min(600, this.currentPlayer.y));
+
     // Actualizar posición del username del jugador actual
     const currentPlayerUsername = this.playerUsernames[this.room.sessionId];
     if (currentPlayerUsername) {
