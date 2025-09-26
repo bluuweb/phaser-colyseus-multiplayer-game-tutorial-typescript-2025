@@ -71,6 +71,9 @@ export class Preloader extends Scene {
     // Crear gráfico de estrella usando Phaser Graphics
     this.createStarGraphic();
 
+    // Crear gráfico de bomba usando Phaser Graphics
+    this.createBombGraphic();
+
     //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
     // this.scene.start('MainMenu');
     this.scene.start("Game");
@@ -107,6 +110,33 @@ export class Preloader extends Scene {
 
     // Convertir el gráfico a textura
     graphics.generateTexture("star", 30, 30);
+    graphics.destroy();
+  }
+
+  private createBombGraphic() {
+    // Crear una bomba usando Graphics
+    const graphics = this.add.graphics();
+
+    // Cuerpo principal de la bomba (círculo negro)
+    graphics.fillStyle(0x1a1a1a); // Negro oscuro
+    graphics.lineStyle(3, 0x333333); // Borde gris oscuro
+    graphics.fillCircle(16, 20, 12);
+    graphics.strokeCircle(16, 20, 12);
+
+    // Fusible (línea en la parte superior)
+    graphics.lineStyle(2, 0x8b4513); // Marrón
+    graphics.lineBetween(16, 8, 10, 2);
+
+    // Chispa del fusible (pequeño círculo amarillo)
+    graphics.fillStyle(0xffff00); // Amarillo brillante
+    graphics.fillCircle(10, 2, 2);
+
+    // Reflejo en la bomba (pequeño círculo blanco)
+    graphics.fillStyle(0xffffff, 0.3); // Blanco semitransparente
+    graphics.fillCircle(13, 17, 3);
+
+    // Convertir el gráfico a textura
+    graphics.generateTexture("bomb", 32, 32);
     graphics.destroy();
   }
 }

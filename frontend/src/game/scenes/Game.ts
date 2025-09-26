@@ -28,6 +28,11 @@ export class Game extends Scene {
     [starId: string]: Phaser.GameObjects.Image;
   } = {};
 
+  // Bombas en el juego
+  bombEntities: {
+    [bombId: string]: Phaser.GameObjects.Image;
+  } = {};
+
   // UI del ranking
   rankingPanel: Phaser.GameObjects.Container;
   rankingTexts: Phaser.GameObjects.Text[] = [];
@@ -66,6 +71,9 @@ export class Game extends Scene {
   }
 
   async create() {
+    // Crear fondo de galaxia
+    this.createGalaxyBackground();
+
     this.cursorKeys = this.input!.keyboard!.createCursorKeys();
 
     // Crear controles WASD
@@ -183,6 +191,48 @@ export class Game extends Scene {
         });
         delete this.starEntities[starId];
       }
+    });
+
+    // Manejar bombas
+    $(this.room.state).bombs.onAdd((bomb, bombId) => {
+      // Crear imagen de bomba
+      const bombEntity = this.add.image(bomb.x, bomb.y, "bomb");
+
+      // Agregar animación de parpadeo de la chispa
+      this.tweens.add({
+        targets: bombEntity,
+        alpha: 0.7,
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+        ease: "Power2",
+      });
+
+      this.bombEntities[bombId] = bombEntity;
+    });
+
+    // Remover bombas
+    $(this.room.state).bombs.onRemove((_bomb, bombId) => {
+      const bombEntity = this.bombEntities[bombId];
+      if (bombEntity) {
+        // Animación de explosión
+        this.tweens.add({
+          targets: bombEntity,
+          scale: 3,
+          alpha: 0,
+          duration: 200,
+          ease: "Power2.easeOut",
+          onComplete: () => {
+            bombEntity.destroy();
+          },
+        });
+        delete this.bombEntities[bombId];
+      }
+    });
+
+    // Escuchar mensaje de explosión del servidor
+    this.room.onMessage("bombExploded", (data) => {
+      this.createExplosionEffect(data.x, data.y);
     });
 
     // Crear panel de ranking
@@ -385,6 +435,113 @@ export class Game extends Scene {
       } else {
         this.rankingTexts[i].setVisible(false);
       }
+    }
+  }
+
+  private createExplosionEffect(x: number, y: number) {
+    // Crear varios círculos de colores para simular la explosión
+    const explosionColors = [0xff6600, 0xff0000, 0xffff00, 0xffa500];
+
+    for (let i = 0; i < 8; i++) {
+      const particle = this.add.circle(
+        x,
+        y,
+        5,
+        explosionColors[i % explosionColors.length]
+      );
+
+      // Animación de partículas hacia afuera
+      const angle = (i / 8) * Math.PI * 2;
+      const distance = 60 + Math.random() * 40;
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0.1,
+        duration: 600,
+        ease: "Power2.easeOut",
+        onComplete: () => {
+          particle.destroy();
+        },
+      });
+    }
+
+    // Efecto de onda expansiva
+    const shockwave = this.add.circle(x, y, 10, 0xffffff, 0.3);
+    this.tweens.add({
+      targets: shockwave,
+      scale: 10,
+      alpha: 0,
+      duration: 400,
+      ease: "Power2.easeOut",
+      onComplete: () => {
+        shockwave.destroy();
+      },
+    });
+
+    // Efecto de flash
+    const flash = this.add.circle(x, y, 20, 0xffffff);
+    this.tweens.add({
+      targets: flash,
+      scale: 3,
+      alpha: 0,
+      duration: 150,
+      ease: "Power2.easeOut",
+      onComplete: () => {
+        flash.destroy();
+      },
+    });
+  }
+
+  private createGalaxyBackground() {
+    // Establecer fondo negro
+    this.cameras.main.setBackgroundColor("#000000");
+
+    // Crear estrellas blancas aleatorias
+    for (let i = 0; i < 150; i++) {
+      const x = Math.random() * 800;
+      const y = Math.random() * 600;
+      const size = Math.random() * 2 + 1; // Tamaño entre 1 y 3
+      const alpha = Math.random() * 0.7 + 0.3; // Transparencia entre 0.3 y 1
+
+      const star = this.add.circle(x, y, size, 0xffffff, alpha);
+      star.setDepth(-10); // Poner las estrellas detrás de todo
+
+      // Agregar parpadeo aleatorio a algunas estrellas
+      if (Math.random() > 0.7) {
+        this.tweens.add({
+          targets: star,
+          alpha: alpha * 0.3,
+          duration: 1000 + Math.random() * 2000,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: Math.random() * 3000,
+        });
+      }
+    }
+
+    // Agregar algunas estrellas más grandes y brillantes
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 800;
+      const y = Math.random() * 600;
+      const size = Math.random() * 3 + 2;
+
+      const star = this.add.circle(x, y, size, 0xffffff, 0.8);
+      star.setDepth(-5);
+
+      // Parpadeo más intenso
+      this.tweens.add({
+        targets: star,
+        alpha: 0.2,
+        duration: 800 + Math.random() * 1500,
+        yoyo: true,
+        repeat: -1,
+        ease: "Power2.easeInOut",
+        delay: Math.random() * 2000,
+      });
     }
   }
 }

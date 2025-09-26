@@ -24,9 +24,16 @@ export class Star extends Schema {
   @type("string") id: string;
 }
 
+export class Bomb extends Schema {
+  @type("number") x: number;
+  @type("number") y: number;
+  @type("string") id: string;
+}
+
 export class MyRoomState extends Schema {
   @type("number") mapWidth: number;
   @type("number") mapHeight: number;
   @type({ map: Player }) players = new MapSchema<Player>();
   @type({ map: Star }) stars = new MapSchema<Star>(); // Estrellas en el mapa
+  @type({ map: Bomb }) bombs = new MapSchema<Bomb>(); // Bombas en el mapa
 }

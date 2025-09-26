@@ -1,5 +1,11 @@
 import { Client, Room } from "@colyseus/core";
-import { InputData, MyRoomState, Player, Star } from "./schema/MyRoomState";
+import {
+  Bomb,
+  InputData,
+  MyRoomState,
+  Player,
+  Star,
+} from "./schema/MyRoomState";
 
 export class MyRoom extends Room<MyRoomState> {
   maxClients = 100;
@@ -10,6 +16,11 @@ export class MyRoom extends Room<MyRoomState> {
   private starSpawnTimer = 0;
   private starSpawnInterval = 3000; // 3 segundos entre estrellas
   private maxStars = 5; // Máximo 5 estrellas simultáneas
+
+  // Control de generación de bombas
+  private bombSpawnTimer = 0;
+  private bombSpawnInterval = 5000; // 5 segundos entre bombas
+  private maxBombs = 3; // Máximo 3 bombas simultáneas
 
   onCreate(options: any) {
     // set map dimensions
@@ -28,6 +39,7 @@ export class MyRoom extends Room<MyRoomState> {
     this.setSimulationInterval((deltaTime) => {
       elapsedTime += deltaTime;
       this.starSpawnTimer += deltaTime;
+      this.bombSpawnTimer += deltaTime;
 
       while (elapsedTime >= this.fixedTimeStep) {
         elapsedTime -= this.fixedTimeStep;
@@ -36,6 +48,9 @@ export class MyRoom extends Room<MyRoomState> {
 
       // Generar estrellas periódicamente
       this.handleStarSpawning();
+
+      // Generar bombas periódicamente
+      this.handleBombSpawning();
     });
   }
 
@@ -49,6 +64,16 @@ export class MyRoom extends Room<MyRoomState> {
     }
   }
 
+  private handleBombSpawning() {
+    if (
+      this.bombSpawnTimer >= this.bombSpawnInterval &&
+      this.state.bombs.size < this.maxBombs
+    ) {
+      this.spawnBomb();
+      this.bombSpawnTimer = 0;
+    }
+  }
+
   private spawnStar() {
     const star = new Star();
     star.id = `star_${Date.now()}_${Math.random()}`;
@@ -57,6 +82,16 @@ export class MyRoom extends Room<MyRoomState> {
 
     this.state.stars.set(star.id, star);
     console.log(`Star spawned at (${star.x}, ${star.y})`);
+  }
+
+  private spawnBomb() {
+    const bomb = new Bomb();
+    bomb.id = `bomb_${Date.now()}_${Math.random()}`;
+    bomb.x = Math.random() * (this.state.mapWidth - 40) + 20; // 20px margen
+    bomb.y = Math.random() * (this.state.mapHeight - 40) + 20; // 20px margen
+
+    this.state.bombs.set(bomb.id, bomb);
+    console.log(`Bomb spawned at (${bomb.x}, ${bomb.y})`);
   }
 
   private checkStarCollisions() {
@@ -73,6 +108,30 @@ export class MyRoom extends Room<MyRoomState> {
           console.log(
             `${player.username} collected a star! Score: ${player.score}`
           );
+        }
+      });
+    });
+  }
+
+  private checkBombCollisions() {
+    this.state.players.forEach((player, sessionId) => {
+      this.state.bombs.forEach((bomb, bombId) => {
+        const distance = Math.sqrt(
+          Math.pow(player.x - bomb.x, 2) + Math.pow(player.y - bomb.y, 2)
+        );
+
+        // Si la distancia es menor a 35px, hay colisión con bomba
+        if (distance < 35) {
+          player.score = 0; // El jugador pierde todas las estrellas
+          this.state.bombs.delete(bombId); // La bomba explota y desaparece
+          console.log(`💥 ${player.username} hit a bomb! All stars lost!`);
+
+          // Enviar mensaje al cliente para activar efecto de explosión
+          this.broadcast("bombExploded", {
+            playerId: sessionId,
+            x: bomb.x,
+            y: bomb.y,
+          });
         }
       });
     });
@@ -108,6 +167,9 @@ export class MyRoom extends Room<MyRoomState> {
 
     // Verificar colisiones con estrellas
     this.checkStarCollisions();
+
+    // Verificar colisiones con bombas
+    this.checkBombCollisions();
   }
 
   onJoin(client: Client, options: any) {
