@@ -122,20 +122,49 @@ export class Boot extends Scene {
 ```typescript
 export class Preloader extends Scene {
   init() {
-    // Muestra fondo y crea barra de progreso visual
-    this.add.image(512, 384, "background");
-    const bar = this.add.rectangle(512 - 230, 384, 4, 28, 0xffffff);
+    // Fondo centrado correctamente
+    this.add.image(400, 300, "background");
 
-    // Actualiza barra cuando cargan assets
+    // Marco de la barra de progreso con fondo oscuro
+    const progressBarBg = this.add
+      .rectangle(400, 300, 468, 32)
+      .setStrokeStyle(2, 0xffffff)
+      .setFillStyle(0x222222);
+
+    // Barra de progreso que crece correctamente centrada
+    const bar = this.add.rectangle(400 - 232, 300, 4, 28, 0x00ff00);
+
+    // Actualizar barra y reposicionar para mantener centrado
     this.load.on("progress", (progress: number) => {
-      bar.width = 4 + 460 * progress;
+      const barWidth = 4 + 460 * progress;
+      bar.width = barWidth;
+      bar.x = 400 - 232 + barWidth / 2 - 2; // ✨ Centrado perfecto
     });
+
+    // Texto "Cargando..." y porcentaje
+    this.add
+      .text(400, 350, "Cargando...", {
+        fontSize: "20px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5);
+
+    const percentText = this.add
+      .text(400, 250, "0%", {
+        fontSize: "18px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
   }
 
   preload() {
-    // Carga todos los assets del juego
-    this.load.image("logo", "logo.png");
-    this.load.image("ship_0001", "ship_0001.png");
+    // Carga automática de todas las 23 naves
+    for (let i = 1; i <= 23; i++) {
+      const shipNumber = i.toString().padStart(4, "0");
+      this.load.image(`ship_${shipNumber}`, `ship_${shipNumber}.png`);
+    }
   }
 }
 ```

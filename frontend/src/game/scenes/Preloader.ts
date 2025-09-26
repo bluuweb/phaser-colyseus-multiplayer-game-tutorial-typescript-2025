@@ -7,18 +7,50 @@ export class Preloader extends Scene {
 
   init() {
     //  We loaded this image in our Boot Scene, so we can display it here
-    this.add.image(512, 384, "background");
+    this.add.image(400, 300, "background");
 
     //  A simple progress bar. This is the outline of the bar.
-    this.add.rectangle(512, 384, 468, 32).setStrokeStyle(1, 0xffffff);
+    const progressBarBg = this.add
+      .rectangle(400, 300, 468, 32)
+      .setStrokeStyle(2, 0xffffff)
+      .setFillStyle(0x222222);
 
     //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
-    const bar = this.add.rectangle(512 - 230, 384, 4, 28, 0xffffff);
+    const bar = this.add.rectangle(400 - 232, 300, 4, 28, 0x00ff00);
 
     //  Use the 'progress' event emitted by the LoaderPlugin to update the loading bar
     this.load.on("progress", (progress: number) => {
       //  Update the progress bar (our bar is 464px wide, so 100% = 464px)
-      bar.width = 4 + 460 * progress;
+      const barWidth = 4 + 460 * progress;
+      bar.width = barWidth;
+      // Reposicionar la barra para que crezca desde la izquierda pero mantenga el centrado visual
+      bar.x = 400 - 232 + barWidth / 2 - 2;
+    });
+
+    // Agregar texto de carga
+    const loadingText = this.add
+      .text(400, 350, "Cargando...", {
+        fontSize: "20px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 2,
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    // Agregar porcentaje
+    const percentText = this.add
+      .text(400, 250, "0%", {
+        fontSize: "18px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 2,
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    this.load.on("progress", (progress: number) => {
+      percentText.setText(Math.round(progress * 100) + "%");
     });
   }
 
