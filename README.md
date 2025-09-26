@@ -13,6 +13,8 @@ Este es un **juego RPG multijugador** donde los jugadores pueden moverse en tiem
 - ✅ **Sistema de ticks fijos** para consistencia en el servidor
 - ✅ **Usernames personalizados** que aparecen arriba de cada jugador
 - ✅ **Selección aleatoria de naves** de 23 diseños disponibles
+- ✅ **Doble sistema de controles** - Flechas del teclado y teclas WASD
+- ✅ **Soporte masivo** para hasta 100 jugadores simultáneos
 
 ## 🚀 Instalación Rápida
 
@@ -61,7 +63,10 @@ Este es un **juego RPG multijugador** donde los jugadores pueden moverse en tiem
    - Abre múltiples pestañas del navegador para ver el multijugador
    - **Se te pedirá un nombre de usuario** al entrar al juego
    - **Se te asignará una nave aleatoria** de las 23 disponibles
-   - Usa las flechas del teclado para moverte
+   - **Controles disponibles:**
+     - **Flechas del teclado**: ↑ ↓ ← → para moverse
+     - **Teclas WASD**: W (arriba), A (izquierda), S (abajo), D (derecha)
+   - **Hasta 100 jugadores** pueden jugar simultáneamente
    - ¡Verás tu nombre y el de otros jugadores arriba de las naves!
 
 ## 🎯 ¿Qué es Phaser 3?
@@ -845,6 +850,81 @@ for (let sessionId in this.playerEntities) {
 - **Posición:** 30 píxeles arriba de la nave
 - **Alineación:** Centrado
 - **Límite:** Máximo 12 caracteres
+
+### 🎮 Sistema de Controles Duales
+
+Los jugadores pueden usar dos sistemas de control diferentes para mayor comodidad:
+
+#### Controles Implementados:
+
+```typescript
+// Game.ts - Configuración de controles
+async create() {
+  // Controles con flechas del teclado (tradicional)
+  this.cursorKeys = this.input!.keyboard!.createCursorKeys();
+
+  // Controles WASD (para gamers de PC)
+  this.wasdKeys = {
+    W: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+    A: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+    S: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+    D: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+  };
+}
+```
+
+#### Lógica de Input Combinada:
+
+```typescript
+// Game.ts - En fixedTick()
+fixedTick() {
+  // Combinar ambos sistemas de control con OR lógico
+  this.inputPayload.left = this.cursorKeys.left.isDown || this.wasdKeys.A.isDown;
+  this.inputPayload.right = this.cursorKeys.right.isDown || this.wasdKeys.D.isDown;
+  this.inputPayload.up = this.cursorKeys.up.isDown || this.wasdKeys.W.isDown;
+  this.inputPayload.down = this.cursorKeys.down.isDown || this.wasdKeys.S.isDown;
+
+  // El resto de la lógica permanece igual
+  this.room.send(0, this.inputPayload);
+}
+```
+
+#### Mapeo de Controles:
+
+| Acción        | Flechas | WASD |
+| ------------- | ------- | ---- |
+| **Arriba**    | ↑       | W    |
+| **Abajo**     | ↓       | S    |
+| **Izquierda** | ←       | A    |
+| **Derecha**   | →       | D    |
+
+#### Ventajas del Sistema Dual:
+
+- ✅ **Flexibilidad:** Los jugadores eligen su preferencia
+- ✅ **Accesibilidad:** Funciona para diferentes tipos de teclados
+- ✅ **Familiaridad:** WASD es estándar en juegos de PC
+- ✅ **Sin conflictos:** Ambos sistemas pueden usarse simultáneamente
+
+### 🏟️ Sistema de Sala Masiva
+
+El servidor ahora soporta hasta **100 jugadores simultáneos**:
+
+```typescript
+// MyRoom.ts - Configuración del servidor
+export class MyRoom extends Room<MyRoomState> {
+  maxClients = 100; // ⬆️ Aumentado de 4 a 100 jugadores
+
+  // El resto de la lógica escala automáticamente
+  // Colyseus maneja eficientemente la sincronización
+}
+```
+
+#### Beneficios de 100 Jugadores:
+
+- 🎊 **Experiencia masiva:** Batallas épicas y eventos grandes
+- ⚡ **Eficiencia:** Colyseus optimiza automáticamente la red
+- 🔧 **Escalabilidad:** Fácil ajustar según necesidades del servidor
+- 🎯 **Testing:** Ideal para pruebas de carga y stress testing
 
 ## 📁 Estructura de Archivos Explicada
 

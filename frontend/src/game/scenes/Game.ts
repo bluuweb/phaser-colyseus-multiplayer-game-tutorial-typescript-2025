@@ -25,10 +25,13 @@ export class Game extends Scene {
 
   debugFPS: Phaser.GameObjects.Text;
 
-  localRef: Phaser.GameObjects.Rectangle;
-  remoteRef: Phaser.GameObjects.Rectangle;
-
   cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
+  wasdKeys: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
 
   inputPayload: {
     left: boolean;
@@ -55,6 +58,15 @@ export class Game extends Scene {
 
   async create() {
     this.cursorKeys = this.input!.keyboard!.createCursorKeys();
+
+    // Crear controles WASD
+    this.wasdKeys = {
+      W: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      A: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      S: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      D: this.input!.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    };
+
     this.debugFPS = this.add.text(4, 4, "", { color: "#ff0000" });
 
     // connect with the room
@@ -87,15 +99,9 @@ export class Game extends Scene {
       if (sessionId === this.room.sessionId) {
         this.currentPlayer = entity;
 
-        this.localRef = this.add.rectangle(0, 0, entity.width, entity.height);
-        this.localRef.setStrokeStyle(1, 0x00ff00);
-
-        this.remoteRef = this.add.rectangle(0, 0, entity.width, entity.height);
-        this.remoteRef.setStrokeStyle(1, 0xff0000);
-
         $(player).onChange(() => {
-          this.remoteRef.x = player.x;
-          this.remoteRef.y = player.y;
+          // Sincronización del servidor (opcional para debug)
+          // No necesitamos mostrar la posición remota visualmente
         });
       } else {
         // listening for server updates
@@ -187,10 +193,15 @@ export class Game extends Scene {
     // console.log({ ticksBehind });
 
     const velocity = 2;
-    this.inputPayload.left = this.cursorKeys.left.isDown;
-    this.inputPayload.right = this.cursorKeys.right.isDown;
-    this.inputPayload.up = this.cursorKeys.up.isDown;
-    this.inputPayload.down = this.cursorKeys.down.isDown;
+
+    // Combinar controles de flechas y WASD
+    this.inputPayload.left =
+      this.cursorKeys.left.isDown || this.wasdKeys.A.isDown;
+    this.inputPayload.right =
+      this.cursorKeys.right.isDown || this.wasdKeys.D.isDown;
+    this.inputPayload.up = this.cursorKeys.up.isDown || this.wasdKeys.W.isDown;
+    this.inputPayload.down =
+      this.cursorKeys.down.isDown || this.wasdKeys.S.isDown;
     this.inputPayload.tick = this.currentTick;
     this.room.send(0, this.inputPayload);
 
@@ -205,9 +216,6 @@ export class Game extends Scene {
     } else if (this.inputPayload.down) {
       this.currentPlayer.y += velocity;
     }
-
-    this.localRef.x = this.currentPlayer.x;
-    this.localRef.y = this.currentPlayer.y;
 
     // Actualizar posición del username del jugador actual
     const currentPlayerUsername = this.playerUsernames[this.room.sessionId];

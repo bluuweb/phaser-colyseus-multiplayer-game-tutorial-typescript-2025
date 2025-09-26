@@ -2,7 +2,7 @@ import { Client, Room } from "@colyseus/core";
 import { InputData, MyRoomState, Player } from "./schema/MyRoomState";
 
 export class MyRoom extends Room<MyRoomState> {
-  maxClients = 4;
+  maxClients = 100;
   state = new MyRoomState();
   fixedTimeStep = 1000 / 60;
 
