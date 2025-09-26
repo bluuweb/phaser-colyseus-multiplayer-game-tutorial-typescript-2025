@@ -3,15 +3,20 @@ import { Scene } from "phaser";
 
 export const BACKEND_URL =
   window.location.href.indexOf("localhost") === -1
-    ? `${window.location.protocol.replace("http", "ws")}//${
-        window.location.hostname
-      }${window.location.port && `:${window.location.port}`}`
-    : "ws://localhost:2567";
+    ? "wss://phaser-colyseus-multiplayer-game.onrender.com" // Producción
+    : "ws://localhost:2567"; // Desarrollo
 
 export const BACKEND_HTTP_URL = BACKEND_URL.replace("ws", "http");
 
+// 🔍 Debug: Mostrar qué URL se está usando
+console.log("🌐 BACKEND_URL:", BACKEND_URL);
+console.log(
+  "🔗 Entorno:",
+  window.location.href.indexOf("localhost") === -1 ? "PRODUCCIÓN" : "DESARROLLO"
+);
+
 export class Game extends Scene {
-  client = new Client("ws://localhost:2567");
+  client = new Client(BACKEND_URL);
   room: Room;
 
   currentPlayer: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
@@ -265,14 +270,22 @@ export class Game extends Scene {
 
     const client = new Client(BACKEND_URL);
 
+    console.log("🔌 Intentando conectar al servidor:", BACKEND_URL);
+
     try {
       // Enviar username como opción al unirse a la sala
       this.room = await client.joinOrCreate("my_room", { username });
 
       // connection successful!
+      console.log("✅ Conexión exitosa al servidor!");
+      console.log("🎮 Sala:", this.room.roomId);
+      console.log("👤 Usuario:", username);
+      console.log("🆔 Session ID:", this.room.sessionId);
       connectionStatusText.destroy();
     } catch (e) {
       // couldn't connect
+      console.error("❌ Error al conectar con el servidor:", e);
+      console.error("🔗 URL utilizada:", BACKEND_URL);
       connectionStatusText.text = "Could not connect with the server.";
     }
   }
