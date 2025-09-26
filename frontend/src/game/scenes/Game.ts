@@ -401,7 +401,7 @@ export class Game extends Scene {
     // Crear array con jugadores y sus puntuaciones
     const playerScores: Array<{ username: string; score: number }> = [];
 
-    this.room.state.players.forEach((player) => {
+    this.room.state.players.forEach((player: any) => {
       playerScores.push({
         username: player.username,
         score: player.score || 0,

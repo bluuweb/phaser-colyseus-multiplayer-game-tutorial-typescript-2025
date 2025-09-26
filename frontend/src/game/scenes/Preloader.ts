@@ -9,12 +9,6 @@ export class Preloader extends Scene {
     //  We loaded this image in our Boot Scene, so we can display it here
     this.add.image(400, 300, "background");
 
-    //  A simple progress bar. This is the outline of the bar.
-    const progressBarBg = this.add
-      .rectangle(400, 300, 468, 32)
-      .setStrokeStyle(2, 0xffffff)
-      .setFillStyle(0x222222);
-
     //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
     const bar = this.add.rectangle(400 - 232, 300, 4, 28, 0x00ff00);
 
@@ -26,17 +20,6 @@ export class Preloader extends Scene {
       // Reposicionar la barra para que crezca desde la izquierda pero mantenga el centrado visual
       bar.x = 400 - 232 + barWidth / 2 - 2;
     });
-
-    // Agregar texto de carga
-    const loadingText = this.add
-      .text(400, 350, "Cargando...", {
-        fontSize: "20px",
-        color: "#ffffff",
-        stroke: "#000000",
-        strokeThickness: 2,
-        align: "center",
-      })
-      .setOrigin(0.5);
 
     // Agregar porcentaje
     const percentText = this.add
