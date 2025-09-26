@@ -1,6 +1,7 @@
 import config from "@colyseus/tools";
 import { monitor } from "@colyseus/monitor";
 import { playground } from "@colyseus/playground";
+import cors from "cors";
 
 /**
  * Import your Room files
@@ -18,6 +19,19 @@ export default config({
     },
 
     initializeExpress: (app) => {
+        /**
+         * Configure CORS to allow Netlify frontend
+         */
+        app.use(cors({
+            origin: [
+                "http://localhost:5173",      // Desarrollo local (Vite)
+                "http://localhost:3000",      // Desarrollo local alternativo
+                "https://colyseus-phaser.netlify.app",  // Tu frontend en Netlify
+                "https://*.netlify.app"       // Otros deploys de Netlify
+            ],
+            credentials: true
+        }));
+
         /**
          * Bind your custom express routes here:
          * Read more: https://expressjs.com/en/starter/basic-routing.html
