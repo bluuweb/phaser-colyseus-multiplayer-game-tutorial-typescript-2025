@@ -406,6 +406,219 @@ update(time: number, delta: number) {
 }
 ```
 
+## ⏰ ¿Qué son los Ticks? - Explicación para Principiantes
+
+Los **ticks** son uno de los conceptos más importantes en el desarrollo de juegos multijugador. Te explico de forma sencilla:
+
+### 🎯 ¿Qué es un Tick?
+
+Un **tick** es como el "latido del corazón" del juego. Es una unidad de tiempo fija en la que el servidor (y cliente) actualizan la lógica del juego.
+
+#### Analogía Simple
+
+Imagínate que el juego es como una película:
+
+- Una **película** tiene 24 fotogramas por segundo
+- Un **juego** tiene 60 **ticks** por segundo
+
+En cada tick, el servidor:
+
+1. ✅ Procesa los inputs de todos los jugadores
+2. ✅ Actualiza posiciones de personajes
+3. ✅ Calcula colisiones
+4. ✅ Envía el estado actualizado a todos los clientes
+
+### 🕐 Tiempo Fijo vs Tiempo Variable
+
+#### ❌ Problema sin Ticks Fijos
+
+```typescript
+// MAL: Basado en tiempo real (variable)
+update(deltaTime) {
+    player.x += speed * deltaTime; // ¡Inconsistente!
+}
+```
+
+**Problema:** Si el juego va lento, el jugador se mueve menos. Si va rápido, se mueve más.
+
+#### ✅ Solución con Ticks Fijos
+
+```typescript
+// BIEN: Tiempo fijo
+const TICK_RATE = 1000 / 60; // 60 ticks por segundo = 16.67ms por tick
+
+fixedTick() {
+    player.x += speed; // ¡Siempre la misma velocidad!
+}
+```
+
+### 🔄 Cómo Funcionan en tu Proyecto
+
+#### En el Servidor (`MyRoom.ts`)
+
+```typescript
+export class MyRoom extends Room<MyRoomState> {
+  fixedTimeStep = 1000 / 60; // 60 ticks por segundo
+
+  onCreate() {
+    // Configura el tick fijo del servidor
+    this.setSimulationInterval((deltaTime) => {
+      this.fixedTick(this.fixedTimeStep);
+    });
+  }
+
+  fixedTick(timeStep: number) {
+    // Procesa TODOS los inputs pendientes
+    this.state.players.forEach((player) => {
+      let input: InputData;
+
+      while ((input = player.inputQueue.shift())) {
+        if (input.left) player.x -= 2;
+        if (input.right) player.x += 2;
+
+        player.tick = input.tick; // ⭐ Sincroniza el número de tick
+      }
+    });
+  }
+}
+```
+
+#### En el Cliente (`Game.ts`)
+
+```typescript
+export class Game extends Scene {
+  private elapsedTime = 0;
+  private fixedTimeStep = 1000 / 60; // Mismo tick rate que servidor
+  private currentTick = 0;
+
+  update(time: number, delta: number) {
+    this.elapsedTime += delta;
+
+    // Ejecuta ticks fijos aunque el framerate sea variable
+    while (this.elapsedTime >= this.fixedTimeStep) {
+      this.elapsedTime -= this.fixedTimeStep;
+      this.currentTick++; // ⭐ Incrementa contador de tick
+      this.fixedTick();
+    }
+  }
+
+  fixedTick() {
+    // Lee input y lo marca con el tick actual
+    this.inputPayload = {
+      left: this.cursorKeys.left.isDown,
+      right: this.cursorKeys.right.isDown,
+      tick: this.currentTick, // ⭐ Número de tick cuando se envió
+    };
+
+    // Envía al servidor
+    this.room.send(0, this.inputPayload);
+  }
+}
+```
+
+### 🎭 Los Ticks Resuelven Problemas Importantes
+
+#### 1. **Sincronización**
+
+```typescript
+// El cliente envía: { left: true, tick: 1205 }
+// El servidor procesa exactamente en el tick 1205
+// ✅ Todos los jugadores ven lo mismo al mismo tiempo
+```
+
+#### 2. **Predicción del Cliente**
+
+```typescript
+// Cliente predice inmediatamente
+if (input.left) {
+  this.currentPlayer.x -= 2; // ⚡ Respuesta instantánea
+}
+
+// Servidor confirma más tarde
+// Si hay diferencia, el cliente se corrige suavemente
+```
+
+#### 3. **Reconciliación**
+
+```typescript
+// Cliente compara su predicción vs respuesta del servidor
+if (Math.abs(localPlayer.x - serverPlayer.x) > 5) {
+  // Ajustar posición gradualmente
+  localPlayer.x = Phaser.Math.Linear(localPlayer.x, serverPlayer.x, 0.1);
+}
+```
+
+### 📊 Ejemplo Visual de Ticks
+
+```
+Tick 1200: Jugador en X=100, presiona →
+Tick 1201: Jugador en X=102, presiona →
+Tick 1202: Jugador en X=104, presiona →
+Tick 1203: Jugador en X=106, suelta →
+Tick 1204: Jugador en X=106, sin input
+```
+
+### ⚙️ Configuraciones Comunes
+
+#### Tick Rates Típicos
+
+```typescript
+// Juegos de acción rápida (shooters)
+const TICK_RATE = 1000 / 128; // 128 ticks/segundo
+
+// Juegos normales (la mayoría)
+const TICK_RATE = 1000 / 60; // 60 ticks/segundo
+
+// Juegos más lentos (estrategia)
+const TICK_RATE = 1000 / 20; // 20 ticks/segundo
+```
+
+#### En tu `MyRoomState.ts`
+
+```typescript
+export interface InputData {
+  left: boolean;
+  right: boolean;
+  up: boolean;
+  down: boolean;
+  tick: number; // ⭐ El número de tick es CRUCIAL
+}
+
+export class Player extends Schema {
+  @type("number") x: number;
+  @type("number") y: number;
+  @type("number") tick: number; // ⭐ Último tick procesado del jugador
+
+  inputQueue: InputData[] = []; // Cola de inputs pendientes
+}
+```
+
+### 🚀 ¿Por Qué es Tan Importante?
+
+#### Sin Ticks Fijos:
+
+- ❌ Jugadores con mejor computadora se mueven más rápido
+- ❌ Lag hace que el juego se vuelva impredecible
+- ❌ Imposible sincronizar múltiples jugadores
+- ❌ Cheating más fácil
+
+#### Con Ticks Fijos:
+
+- ✅ Todos los jugadores van a la misma velocidad
+- ✅ El juego es determinístico y reproducible
+- ✅ Sincronización perfecta entre clientes
+- ✅ Detección de cheating más fácil
+
+### 💡 Tips para Principiantes
+
+1. **Tick = Paso de tiempo fijo** (ej: cada 16.67ms)
+2. **Número de tick = Contador** que se incrementa cada paso
+3. **Input con tick** permite saber "cuándo" se presionó una tecla
+4. **Servidor autoritativo** usa ticks para validar todo
+5. **Cliente predice** pero servidor tiene la palabra final
+
+¡Los ticks son la base de todo juego multijugador serio! 🎮✨
+
 ## 🎓 Tutorial: Crear tu Primera Función
 
 ### Ejemplo 1: Agregar Sistema de Chat
