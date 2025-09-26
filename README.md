@@ -11,6 +11,8 @@ Este es un **juego RPG multijugador** donde los jugadores pueden moverse en tiem
 - ✅ **Predicción del lado del cliente** para movimiento fluido
 - ✅ **Interpolación** de posiciones de otros jugadores
 - ✅ **Sistema de ticks fijos** para consistencia en el servidor
+- ✅ **Usernames personalizados** que aparecen arriba de cada jugador
+- ✅ **Selección aleatoria de naves** de 23 diseños disponibles
 
 ## 🚀 Instalación Rápida
 
@@ -57,7 +59,10 @@ Este es un **juego RPG multijugador** donde los jugadores pueden moverse en tiem
 
 3. **¡Jugar!**
    - Abre múltiples pestañas del navegador para ver el multijugador
+   - **Se te pedirá un nombre de usuario** al entrar al juego
+   - **Se te asignará una nave aleatoria** de las 23 disponibles
    - Usa las flechas del teclado para moverte
+   - ¡Verás tu nombre y el de otros jugadores arriba de las naves!
 
 ## 🎯 ¿Qué es Phaser 3?
 
@@ -679,7 +684,7 @@ export class Player extends Schema {
 ```typescript
 // Game.ts - dentro de create()
 $(this.room.state).players.onAdd((player, sessionId) => {
-  const entity = this.physics.add.image(player.x, player.y, "ship_0001");
+  const entity = this.physics.add.image(player.x, player.y, player.shipType);
 
   // Crear barra de salud
   const healthBar = this.add.rectangle(
@@ -697,6 +702,149 @@ $(this.room.state).players.onAdd((player, sessionId) => {
   });
 });
 ```
+
+## 🎮 Funcionalidades Implementadas en el Proyecto
+
+### 🏷️ Sistema de Usernames
+
+Cada jugador puede personalizar su nombre al entrar al juego:
+
+#### En el Servidor (`MyRoomState.ts`):
+
+```typescript
+export class Player extends Schema {
+  @type("number") x: number;
+  @type("number") y: number;
+  @type("number") tick: number;
+  @type("string") username: string = "Player"; // 🆕 Username del jugador
+  @type("string") shipType: string = "ship_0001"; // 🆕 Tipo de nave
+  inputQueue: InputData[] = [];
+}
+```
+
+#### En el Cliente (`Game.ts`):
+
+```typescript
+async connect() {
+  // Solicitar username al usuario
+  let username = prompt("¡Bienvenido al juego!\n\nIngresa tu nombre de usuario:");
+
+  // Validar y limpiar username
+  if (!username || username.trim() === "") {
+    username = `Player_${Math.floor(Math.random() * 1000)}`;
+  }
+  username = username.trim().substring(0, 12); // Máximo 12 caracteres
+
+  // Enviar username al servidor
+  this.room = await client.joinOrCreate("my_room", { username });
+}
+```
+
+### 🚀 Sistema de Naves Aleatorias
+
+Cada jugador recibe una nave única aleatoriamente seleccionada:
+
+#### Pool de Naves Disponibles:
+
+```typescript
+// MyRoom.ts - 23 naves diferentes
+const shipTypes = [
+  "ship_0001",
+  "ship_0002",
+  "ship_0003",
+  "ship_0004",
+  "ship_0005",
+  "ship_0006",
+  "ship_0007",
+  "ship_0008",
+  "ship_0009",
+  "ship_0010",
+  "ship_0011",
+  "ship_0012",
+  "ship_0013",
+  "ship_0014",
+  "ship_0015",
+  "ship_0016",
+  "ship_0017",
+  "ship_0018",
+  "ship_0019",
+  "ship_0020",
+  "ship_0021",
+  "ship_0022",
+  "ship_0023",
+];
+
+// Selección aleatoria
+player.shipType = shipTypes[Math.floor(Math.random() * shipTypes.length)];
+```
+
+#### Carga de Assets (`Preloader.ts`):
+
+```typescript
+preload() {
+  // Cargar todas las naves disponibles automáticamente
+  for (let i = 1; i <= 23; i++) {
+    const shipNumber = i.toString().padStart(4, '0');
+    this.load.image(`ship_${shipNumber}`, `ship_${shipNumber}.png`);
+  }
+}
+```
+
+### 📝 Visualización de Usernames
+
+Los nombres aparecen flotando arriba de cada nave:
+
+```typescript
+// Game.ts - Crear username text
+$(this.room.state).players.onAdd((player, sessionId) => {
+  // Crear sprite con la nave específica
+  const entity = this.physics.add.image(player.x, player.y, player.shipType);
+
+  // Crear texto del username arriba del jugador
+  const usernameText = this.add
+    .text(player.x, player.y - 30, player.username, {
+      fontSize: "12px",
+      color: "#ffffff",
+      stroke: "#000000",
+      strokeThickness: 2,
+      align: "center",
+    })
+    .setOrigin(0.5);
+
+  this.playerUsernames[sessionId] = usernameText;
+});
+```
+
+### 🔄 Sincronización de Posiciones
+
+Los usernames siguen a los jugadores automáticamente:
+
+```typescript
+// Game.ts - En fixedTick()
+for (let sessionId in this.playerEntities) {
+  const entity = this.playerEntities[sessionId];
+  const usernameText = this.playerUsernames[sessionId];
+
+  // Interpolar posición de nave
+  entity.x = Phaser.Math.Linear(entity.x, serverX, 0.2);
+  entity.y = Phaser.Math.Linear(entity.y, serverY, 0.2);
+
+  // Mover username siguiendo a la nave
+  if (usernameText) {
+    usernameText.x = entity.x;
+    usernameText.y = entity.y - 30; // 30 píxeles arriba de la nave
+  }
+}
+```
+
+### 🎨 Estilos del Username
+
+- **Color:** Blanco (`#ffffff`)
+- **Borde:** Negro con grosor de 2px para mejor legibilidad
+- **Tamaño:** 12px
+- **Posición:** 30 píxeles arriba de la nave
+- **Alineación:** Centrado
+- **Límite:** Máximo 12 caracteres
 
 ## 📁 Estructura de Archivos Explicada
 

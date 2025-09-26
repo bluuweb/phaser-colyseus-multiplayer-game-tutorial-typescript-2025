@@ -12,6 +12,8 @@ export class Player extends Schema {
   @type("number") x: number;
   @type("number") y: number;
   @type("number") tick: number;
+  @type("string") username: string = "Player";
+  @type("string") shipType: string = "ship_0001";
   inputQueue: InputData[] = [];
 }
 

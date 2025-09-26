@@ -62,6 +62,38 @@ export class MyRoom extends Room<MyRoomState> {
     player.x = Math.random() * this.state.mapWidth;
     player.y = Math.random() * this.state.mapHeight;
 
+    // Configurar username y nave aleatoria
+    player.username = options.username || "Player";
+
+    // Seleccionar nave aleatoria del pool disponible
+    const shipTypes = [
+      "ship_0001",
+      "ship_0002",
+      "ship_0003",
+      "ship_0004",
+      "ship_0005",
+      "ship_0006",
+      "ship_0007",
+      "ship_0008",
+      "ship_0009",
+      "ship_0010",
+      "ship_0011",
+      "ship_0012",
+      "ship_0013",
+      "ship_0014",
+      "ship_0015",
+      "ship_0016",
+      "ship_0017",
+      "ship_0018",
+      "ship_0019",
+      "ship_0020",
+      "ship_0021",
+      "ship_0022",
+      "ship_0023",
+    ];
+    player.shipType = shipTypes[Math.floor(Math.random() * shipTypes.length)];
+
+    console.log(`${player.username} joined with ship: ${player.shipType}`);
     this.state.players.set(client.sessionId, player);
   }
 

@@ -19,6 +19,10 @@ export class Game extends Scene {
     [sessionId: string]: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
   } = {};
 
+  playerUsernames: {
+    [sessionId: string]: Phaser.GameObjects.Text;
+  } = {};
+
   debugFPS: Phaser.GameObjects.Text;
 
   localRef: Phaser.GameObjects.Rectangle;
@@ -59,8 +63,25 @@ export class Game extends Scene {
     const $ = getStateCallbacks(this.room);
 
     $(this.room.state).players.onAdd((player, sessionId) => {
-      const entity = this.physics.add.image(player.x, player.y, "ship_0001");
+      // Crear sprite con la nave específica del jugador
+      const entity = this.physics.add.image(
+        player.x,
+        player.y,
+        player.shipType
+      );
       this.playerEntities[sessionId] = entity;
+
+      // Crear texto del username arriba del jugador
+      const usernameText = this.add
+        .text(player.x, player.y - 30, player.username, {
+          fontSize: "12px",
+          color: "#ffffff",
+          stroke: "#000000",
+          strokeThickness: 2,
+          align: "center",
+        })
+        .setOrigin(0.5);
+      this.playerUsernames[sessionId] = usernameText;
 
       // is current player
       if (sessionId === this.room.sessionId) {
@@ -91,9 +112,16 @@ export class Game extends Scene {
     // remove local reference when entity is removed from the server
     $(this.room.state).players.onRemove((_player, sessionId) => {
       const entity = this.playerEntities[sessionId];
+      const usernameText = this.playerUsernames[sessionId];
+
       if (entity) {
         entity.destroy();
         delete this.playerEntities[sessionId];
+      }
+
+      if (usernameText) {
+        usernameText.destroy();
+        delete this.playerUsernames[sessionId];
       }
     });
 
@@ -109,10 +137,24 @@ export class Game extends Scene {
       .setStyle({ color: "#ff0000" })
       .setPadding(4);
 
+    // Solicitar username al usuario
+    let username = prompt(
+      "¡Bienvenido al juego!\n\nIngresa tu nombre de usuario:"
+    );
+
+    // Validar username
+    if (!username || username.trim() === "") {
+      username = `Player_${Math.floor(Math.random() * 1000)}`;
+    }
+
+    // Limitar longitud del username
+    username = username.trim().substring(0, 12);
+
     const client = new Client(BACKEND_URL);
 
     try {
-      this.room = await client.joinOrCreate("my_room", {});
+      // Enviar username como opción al unirse a la sala
+      this.room = await client.joinOrCreate("my_room", { username });
 
       // connection successful!
       connectionStatusText.destroy();
@@ -167,6 +209,13 @@ export class Game extends Scene {
     this.localRef.x = this.currentPlayer.x;
     this.localRef.y = this.currentPlayer.y;
 
+    // Actualizar posición del username del jugador actual
+    const currentPlayerUsername = this.playerUsernames[this.room.sessionId];
+    if (currentPlayerUsername) {
+      currentPlayerUsername.x = this.currentPlayer.x;
+      currentPlayerUsername.y = this.currentPlayer.y - 30;
+    }
+
     for (let sessionId in this.playerEntities) {
       // interpolate all player entities
       // (except the current player)
@@ -175,10 +224,17 @@ export class Game extends Scene {
       }
 
       const entity = this.playerEntities[sessionId];
+      const usernameText = this.playerUsernames[sessionId];
       const { serverX, serverY } = entity.data.values;
 
       entity.x = Phaser.Math.Linear(entity.x, serverX, 0.2);
       entity.y = Phaser.Math.Linear(entity.y, serverY, 0.2);
+
+      // Actualizar posición del username siguiendo al jugador
+      if (usernameText) {
+        usernameText.x = entity.x;
+        usernameText.y = entity.y - 30;
+      }
     }
   }
 }

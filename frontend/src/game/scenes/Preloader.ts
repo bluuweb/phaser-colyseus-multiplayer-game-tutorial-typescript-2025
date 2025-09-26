@@ -28,7 +28,11 @@ export class Preloader extends Scene {
 
     this.load.image("logo", "logo.png");
 
-    this.load.image("ship_0001", "ship_0001.png");
+    // Cargar todas las naves disponibles
+    for (let i = 1; i <= 23; i++) {
+      const shipNumber = i.toString().padStart(4, "0");
+      this.load.image(`ship_${shipNumber}`, `ship_${shipNumber}.png`);
+    }
   }
 
   create() {
