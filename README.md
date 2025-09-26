@@ -327,28 +327,38 @@ export interface InputData {
 ### 1. **Inicialización**
 
 ```mermaid
-Cliente → Servidor: Conectar a ws://localhost:2567
-Cliente → Servidor: Unirse a sala "my_room"
-Servidor → Cliente: Envía estado inicial (otros jugadores)
+sequenceDiagram
+    participant C as Cliente
+    participant S as Servidor
+    C->>S: Conectar a ws://localhost:2567
+    C->>S: Unirse a sala "my_room"
+    S->>C: Envía estado inicial (otros jugadores)
 ```
 
 ### 2. **Loop de Juego (cada frame)**
 
 ```mermaid
-Cliente: Lee teclas presionadas
-Cliente: Mueve jugador localmente (PREDICCIÓN)
-Cliente → Servidor: Envía input {left: true, tick: 1234}
-Servidor: Procesa input, actualiza posición oficial
-Servidor → Todos: Sincroniza nuevo estado
-Cliente: Compara posición local vs servidor (RECONCILIACIÓN)
+sequenceDiagram
+    participant C as Cliente
+    participant S as Servidor
+    participant T as Todos los Clientes
+    Note over C: Lee teclas presionadas
+    Note over C: Mueve jugador localmente (PREDICCIÓN)
+    C->>S: Envía input {left: true, tick: 1234}
+    Note over S: Procesa input, actualiza posición oficial
+    S->>T: Sincroniza nuevo estado
+    Note over C: Compara posición local vs servidor (RECONCILIACIÓN)
 ```
 
 ### 3. **Otros Jugadores**
 
 ```mermaid
-Servidor → Cliente: Estado de otros jugadores actualizado
-Cliente: INTERPOLA posiciones suavemente
-Cliente: Renderiza frame con todos los jugadores
+sequenceDiagram
+    participant S as Servidor
+    participant C as Cliente
+    S->>C: Estado de otros jugadores actualizado
+    Note over C: INTERPOLA posiciones suavemente
+    Note over C: Renderiza frame con todos los jugadores
 ```
 
 ## 🛠️ Técnicas Avanzadas Implementadas
